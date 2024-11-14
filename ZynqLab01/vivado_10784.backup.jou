@@ -1,0 +1,15 @@
+#-----------------------------------------------------------
+# Vivado v2019.1 (64-bit)
+# SW Build 2552052 on Fri May 24 14:49:42 MDT 2019
+# IP Build 2548770 on Fri May 24 18:01:18 MDT 2019
+# Start of session at: Sun Oct 20 22:37:58 2024
+# Process ID: 10784
+# Current directory: E:/Verilog/soc/ZynqLab01
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent7328 E:\Verilog\soc\ZynqLab01\ZynqLab01.xpr
+# Log file: E:/Verilog/soc/ZynqLab01/vivado.log
+# Journal file: E:/Verilog/soc/ZynqLab01\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project E:/Verilog/soc/ZynqLab01/ZynqLab01.xpr
+update_compile_order -fileset sources_1
+save_project_as ZynqLab02 E:/Verilog/soc/ZynqLab02 -exclude_run_results -force

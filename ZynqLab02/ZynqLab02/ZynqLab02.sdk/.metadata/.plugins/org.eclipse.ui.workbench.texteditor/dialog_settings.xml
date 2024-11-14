@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="MYSIMPLEIO_mWriteReg(XPAR_MYSIMPLEIO_0_S00_AXI_BASEADDR, 0, btn_state);" key="selection"/>
+		<list key="findhistory">
+			<item value="MYSIMPLEIO_mWriteReg(XPAR_MYSIMPLEIO_0_S00_AXI_BASEADDR, 0, btn_state);"/>
+		</list>
+	</section>
+</section>

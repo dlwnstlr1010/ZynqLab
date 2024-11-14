@@ -1,0 +1,35 @@
+#include "stdio.h"
+#include "xparameters.h"
+#include "xil_io.h"
+#include "myPWM.h"
+#include "myTimer.h"
+
+int main(){
+    volatile int i;
+    int j;
+
+    // 타이머 초기 설정 (타이머 주기)
+    MYTIMER_mWriteReg(XPAR_MYTIMER_0_S00_AXI_BASEADDR, 0, 9e6);
+
+    while(1) {
+        for(j = 0; j < 0x1000; j++) {
+            // LED0의 듀티 사이클 설정 (slv_reg0)
+            MYPWM_mWriteReg(XPAR_MYPWM_0_S00_AXI_BASEADDR, 0x0, j);
+
+            // LED1의 듀티 사이클 설정 (slv_reg1)
+            MYPWM_mWriteReg(XPAR_MYPWM_0_S00_AXI_BASEADDR, 0x4, j);
+
+            // LED2의 듀티 사이클 설정 (slv_reg2)
+            MYPWM_mWriteReg(XPAR_MYPWM_0_S00_AXI_BASEADDR, 0x8, j);
+
+            // LED3의 듀티 사이클 설정 (slv_reg3)
+            MYPWM_mWriteReg(XPAR_MYPWM_0_S00_AXI_BASEADDR, 0xC, j);
+
+            // 짧은 지연을 위한 루프
+            for(i = 0; i < 2e4; i++);
+
+        }
+        printf("myPWM IP Test\n");
+    }
+    return 0;
+}

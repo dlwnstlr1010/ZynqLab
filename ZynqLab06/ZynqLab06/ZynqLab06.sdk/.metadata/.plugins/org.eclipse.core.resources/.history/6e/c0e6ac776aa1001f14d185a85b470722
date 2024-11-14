@@ -1,0 +1,97 @@
+/*
+ * main.c
+ *
+ *  Created on: 2024. 11. 11.
+ *      Author: dlwns
+ */
+
+#include "stdio.h"
+#include "xgpio.h"
+#include "xparameters.h"
+#include "xscugic.h"
+#include "myKEYPAD2.h"
+
+#define KEYPAD_ST (volatile unsigned int *)(XPAR_MYKEYPAD2_0_S00_AXI_BASEADDR + 0)
+#define KEYPAD_NUM (volatile unsigned int *)(XPAR_MYKEYPAD2_0_S00_AXI_BASEADDR + 4)
+#define DEBOUNCE_DELAY 1000000  // Adjust as needed for optimal debounce
+
+XGpio Gpio;
+XScuGic INTCInst;
+
+volatile unsigned int keyPressed = 0;     // Track key press state
+volatile unsigned int keyNum = 0xFF;      // Last valid key number
+
+/////////////////////////////////////////////////////
+// MyKEYPAD Interrupt Handler
+/////////////////////////////////////////////////////
+
+void MyKEYPADISR(void *arg)
+{
+    // Read keypad value and set the keyPressed flag
+    keyNum = *KEYPAD_NUM & 0xFF;
+    keyPressed = 1;
+}
+
+/////////////////////////////////////////////////////
+// GIC-related interrupt configuration
+/////////////////////////////////////////////////////
+
+void InitGIC_Interrupt()
+{
+    XScuGic_Config *IntcConfig;
+
+    IntcConfig = XScuGic_LookupConfig(XPAR_PS7_SCUGIC_0_DEVICE_ID);
+    XScuGic_CfgInitialize(&INTCInst, IntcConfig, IntcConfig->CpuBaseAddress);
+
+    // Set priority and trigger type
+    XScuGic_SetPriorityTriggerType(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR, 0, 3);
+
+    // Connect MyKEYPAD2 interrupt
+    XScuGic_Connect(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR, (Xil_ExceptionHandler)MyKEYPADISR, (void *)&Gpio);
+    XScuGic_Enable(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR);
+}
+
+/////////////////////////////////////////////////////
+// ARM Cortex-related interrupt configuration
+/////////////////////////////////////////////////////
+
+void InitCortex_Interrupt()
+{
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT, (Xil_ExceptionHandler)XScuGic_InterruptHandler, &INTCInst);
+    Xil_ExceptionEnable();
+}
+
+/////////////////////////////////////////////////////
+// MAIN FUNCTION
+/////////////////////////////////////////////////////
+
+int main()
+{
+    // Initialize GPIO
+    XGpio_Initialize(&Gpio, XPAR_AXI_GPIO_0_DEVICE_ID);
+
+    // Initialize GIC and Cortex interrupts
+    InitGIC_Interrupt();
+    InitCortex_Interrupt();
+
+    while (1) {
+        // Check if a key was pressed
+        if (keyPressed) {
+            // Simple debounce delay
+            for (volatile unsigned int i = 0; i < DEBOUNCE_DELAY; i++);
+
+            // Confirm the key press
+            if ((*KEYPAD_NUM & 0xFF) == keyNum && keyNum != 0xFF) {
+                // Output the confirmed key press
+                XGpio_DiscreteWrite(&Gpio, 1, keyNum);
+                printf("Key Pressed: %d\n", keyNum);
+            }
+
+            // Reset the key press state
+            keyPressed = 0;
+            keyNum = 0xFF;
+        }
+    }
+
+    return 0;
+}

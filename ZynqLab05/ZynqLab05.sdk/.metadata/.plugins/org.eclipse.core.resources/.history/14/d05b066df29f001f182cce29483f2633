@@ -1,0 +1,31 @@
+#include "stdio.h"
+#include "xgpio.h"
+
+XGpio Gpio0;     // 4 Btn
+XGpio Gpio1;       // 4 LED
+
+
+void Delay(unsigned int n)
+{
+   volatile unsigned int i;
+
+   for (i=0; i<n ; i++);
+}
+
+int main()
+{
+   int pushSW;
+
+   XGpio_Initialize(&Gpio0, XPAR_AXI_GPIO_0_DEVICE_ID);     // 4 Btn
+   XGpio_Initialize(&Gpio1, XPAR_AXI_GPIO_1_DEVICE_ID);      // 4 LED
+
+   while (1){
+     pushSW = XGpio_DiscreteRead(&Gpio0, 1);
+     XGpio_DiscreteWrite(&Gpio1, 1, pushSW);
+
+     printf("Hello World PushSW = %2d\n\r", pushSW);
+      Delay(1e8);
+   }
+
+   return 0;
+}

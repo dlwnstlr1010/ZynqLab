@@ -1,0 +1,28 @@
+/*
+ * main.c
+ *
+ *  Created on: 2024. 11. 4.
+ *      Author: dlwns
+ */
+#include "stdio.h"
+#include "xparameters.h"
+#include "xil_io.h"
+#include "myPWM.h"
+#include "myTimer.h"
+
+int main(){
+	volatile int i;
+	int j;
+
+	MYTIMER_mWriteReg(XPAR_MYTIMER_0_S00_AXI_BASEADDR, 0, 9e6);
+
+	while(1){
+		for(j=0; j<0x1000; j++){
+			MYPWM_mWriteReg(XPAR_MYPWM_0_S00_AXI_BASEADDR, 0, j);
+			for(i=0; i<2e4; i++);
+		}
+		printf("myPWM IP Test\n");
+	}
+	return 0;
+}
+

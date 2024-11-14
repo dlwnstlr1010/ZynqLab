@@ -1,0 +1,105 @@
+/*
+ * main.c
+ *
+ *  Created on: 2024. 11. 11.
+ *      Author: dlwns
+ */
+
+#include "stdio.h"
+#include "xgpio.h"
+#include "xparameters.h"
+#include "xscugic.h"
+#include "myKEYPAD2.h"
+
+#define KEYPAD_ST (volatile unsigned int *)(XPAR_MYKEYPAD2_0_S00_AXI_BASEADDR + 0)
+#define KEYPAD_NUM (volatile unsigned int *)(XPAR_MYKEYPAD2_0_S00_AXI_BASEADDR + 4)
+#define DEBOUNCE_DELAY 33000000ULL  // Adjust this for optimal debounce time
+
+XGpio Gpio;
+XScuGic INTCInst;
+
+unsigned int prevKeyNum = 0xFF; // Track last key number
+unsigned int isKeyReleased = 1;  // Track if key has been released
+volatile unsigned long long debounceTimer = 0;
+
+/////////////////////////////////////////////////////
+// MyKEYPAD Interrupt Handler with Debounce and Key Release Detection
+/////////////////////////////////////////////////////
+
+void MyKEYPADISR(void *arg)
+{
+    unsigned int keyNumHw;
+
+    // Read keypad value
+    keyNumHw = *KEYPAD_NUM & 0xFF;
+
+    // If a key is pressed and debounce delay has passed
+    if (keyNumHw != 0xFF && isKeyReleased && debounceTimer == 0) {
+        // Process key press
+        XGpio_DiscreteWrite(&Gpio, 1, keyNumHw);
+        printf("MyKEYPADISR: KeyNum = %d\n", keyNumHw);
+
+        prevKeyNum = keyNumHw;   // Store the current key
+        isKeyReleased = 0;       // Mark the key as pressed
+        debounceTimer = DEBOUNCE_DELAY;  // Set debounce delay
+    }
+
+    // If no key is pressed, mark the key as released
+    if (keyNumHw == 0xFF && !isKeyReleased) {
+        isKeyReleased = 1;  // Allow next press to be detected
+    }
+
+    // Decrease debounce timer if active
+    if (debounceTimer > 0) {
+        debounceTimer--;
+    }
+}
+
+/////////////////////////////////////////////////////
+// GIC-related interrupt configuration
+/////////////////////////////////////////////////////
+
+void InitGIC_Interrupt()
+{
+    XScuGic_Config *IntcConfig;
+
+    IntcConfig = XScuGic_LookupConfig(XPAR_PS7_SCUGIC_0_DEVICE_ID);
+    XScuGic_CfgInitialize(&INTCInst, IntcConfig, IntcConfig->CpuBaseAddress);
+
+    // Set priority and trigger type
+    XScuGic_SetPriorityTriggerType(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR, 0, 3);
+
+    // Connect MyKEYPAD2 interrupt
+    XScuGic_Connect(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR, (Xil_ExceptionHandler)MyKEYPADISR, (void *)&Gpio);
+    XScuGic_Enable(&INTCInst, XPAR_FABRIC_MYKEYPAD2_0_IRQ_INTR);
+}
+
+/////////////////////////////////////////////////////
+// ARM Cortex-related interrupt configuration
+/////////////////////////////////////////////////////
+
+void InitCortex_Interrupt()
+{
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT, (Xil_ExceptionHandler)XScuGic_InterruptHandler, &INTCInst);
+    Xil_ExceptionEnable();
+}
+
+/////////////////////////////////////////////////////
+// MAIN FUNCTION
+/////////////////////////////////////////////////////
+
+int main()
+{
+    // Initialize GPIO
+    XGpio_Initialize(&Gpio, XPAR_AXI_GPIO_0_DEVICE_ID);
+
+    // Initialize GIC and Cortex interrupts
+    InitGIC_Interrupt();
+    InitCortex_Interrupt();
+
+    while (1) {
+        // Do nothing, wait for interrupts
+    }
+
+    return 0;
+}
